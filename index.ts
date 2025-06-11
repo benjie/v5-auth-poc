@@ -5,21 +5,20 @@ import { postgraphile } from "postgraphile";
 import { makePgService } from "postgraphile/adaptors/pg";
 import { grafserv } from "postgraphile/grafserv/express/v4";
 import { PostGraphileAmberPreset } from "postgraphile/presets/amber";
-import { AuthStep } from "./AuthStep";
-import { Step } from "postgraphile/grafast";
+import { applyAuth } from "./AuthStep";
 import { PgSelectStep } from "postgraphile/@dataplan/pg";
 
-/** @type {GraphileConfig.Plugin} */
-const AuthPlugin = {
+const AuthPlugin: GraphileConfig.Plugin = {
   name: "AuthPlugin",
   version: "0.0.0",
 
   gather: {
     hooks: {
-      pgTables_PgResourceOptions(info: any, event: any) {
+      pgTables_PgResourceOptions(info, event) {
+        const {serviceName, pgClass: {relname, relnamespace}} = event
+        const ident = `${relname}.${relnamespace}`
         event.resourceOptions.selectAuth = ($pgSelect: PgSelectStep) => {
-          const $authStep = new AuthStep($pgSelect);
-          $pgSelect.apply($authStep);
+          applyAuth(ident, $pgSelect);
           return $pgSelect;
         };
       },
