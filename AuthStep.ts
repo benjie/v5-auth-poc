@@ -74,12 +74,15 @@ export class AuthStep extends UnbatchedStep<PgSelectQueryBuilderCallback> {
     const rules = getAuthRules(this.ident, userId);
     return (qb: PgSelectQueryBuilder) => {
       if (!rules.allow) {
-        // Benjie doesn't know if this will work right. Probably!
-        // Benjie doesn't like to throw errors in these situations: https://github.com/benjie/.dev/issues/25
-        throw new Error("Access denied");
-      }
-      for (const cond of rules.conditions) {
-        qb.where(cond(qb.alias));
+        // Don't throw, it will cause parent PgSelect to fail when inlined.
+        // See also: https://github.com/benjie/.dev/issues/25
+        qb.where(sql.false);
+        // TODO: should augment PgSelectStep with support for something like
+        // `qb.setIsNullFetch(true)` to avoid fetching entirely.
+      } else {
+        for (const cond of rules.conditions) {
+          qb.where(cond(qb.alias));
+        }
       }
     };
   }
